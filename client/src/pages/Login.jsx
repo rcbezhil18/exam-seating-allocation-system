@@ -19,7 +19,7 @@ const Login = () => {
       const res = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify({ ...res.data.user, role: 'coordinator' }));
-      window.location.href = '/'; 
+      navigate('/'); 
     } catch (err) {
       setError(err.response?.data?.msg || 'Admin login failed');
     }
@@ -32,7 +32,7 @@ const Login = () => {
       const res = await api.post('/auth/student-login', { username: studentId, password: dob });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
-      window.location.href = '/student/dashboard';
+      navigate('/student/dashboard');
     } catch (err) {
       setError(err.response?.data?.msg || 'Student login failed. Check ID and Format (DD-MM-YYYY).');
     }
