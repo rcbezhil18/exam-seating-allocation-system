@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Students from './pages/Students';
@@ -33,34 +33,41 @@ const AuthGate = () => {
   return <Login />;
 };
 
-function App() {
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
-  const showSidebar = user && user.role !== 'student'; // Student handles its own layout for now or we update Sidebar
+const Layout = ({ children }) => {
+  const location = useLocation();
+  const isAdminRoute = location.pathname !== '/login' && !location.pathname.startsWith('/student');
 
   return (
-    <Router>
-      <div className="flex bg-slate-50 min-h-screen font-sans">
-        {showSidebar && <Sidebar />}
-        <div className="flex-1 flex flex-col relative overflow-hidden h-screen">
-          <main className="flex-1 overflow-y-auto w-full">
-            <Routes>
-              <Route path="/login" element={<AuthGate />} />
-              
-              {/* Admin Routes */}
-              <Route path="/" element={<PrivateRoute allowedRoles={['coordinator']}><Dashboard /></PrivateRoute>} />
-              <Route path="/students" element={<PrivateRoute allowedRoles={['coordinator']}><Students /></PrivateRoute>} />
-              <Route path="/rooms" element={<PrivateRoute allowedRoles={['coordinator']}><Rooms /></PrivateRoute>} />
-              <Route path="/exams" element={<PrivateRoute allowedRoles={['coordinator']}><Exams /></PrivateRoute>} />
-              <Route path="/generate" element={<PrivateRoute allowedRoles={['coordinator']}><Generate /></PrivateRoute>} />
-              <Route path="/payments" element={<PrivateRoute allowedRoles={['coordinator']}><PaymentTracking /></PrivateRoute>} />
-
-              {/* Student Routes */}
-              <Route path="/student/dashboard" element={<PrivateRoute allowedRoles={['student']}><StudentDashboard /></PrivateRoute>} />
-            </Routes>
-          </main>
-        </div>
+    <div className="flex bg-slate-50 min-h-screen font-sans">
+      {isAdminRoute && <Sidebar />}
+      <div className="flex-1 flex flex-col relative overflow-hidden h-screen">
+        <main className="flex-1 overflow-y-auto w-full">
+          {children}
+        </main>
       </div>
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <Layout>
+        <Routes>
+          <Route path="/login" element={<AuthGate />} />
+          
+          {/* Admin Routes */}
+          <Route path="/" element={<PrivateRoute allowedRoles={['coordinator']}><Dashboard /></PrivateRoute>} />
+          <Route path="/students" element={<PrivateRoute allowedRoles={['coordinator']}><Students /></PrivateRoute>} />
+          <Route path="/rooms" element={<PrivateRoute allowedRoles={['coordinator']}><Rooms /></PrivateRoute>} />
+          <Route path="/exams" element={<PrivateRoute allowedRoles={['coordinator']}><Exams /></PrivateRoute>} />
+          <Route path="/generate" element={<PrivateRoute allowedRoles={['coordinator']}><Generate /></PrivateRoute>} />
+          <Route path="/payments" element={<PrivateRoute allowedRoles={['coordinator']}><PaymentTracking /></PrivateRoute>} />
+
+          {/* Student Routes */}
+          <Route path="/student/dashboard" element={<PrivateRoute allowedRoles={['student']}><StudentDashboard /></PrivateRoute>} />
+        </Routes>
+      </Layout>
     </Router>
   );
 }
