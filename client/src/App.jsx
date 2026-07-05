@@ -15,9 +15,24 @@ const PrivateRoute = ({ children, allowedRoles }) => {
   const userStr = localStorage.getItem('user');
   if (!token || !userStr) return <Navigate to="/login" />;
   
-  const user = JSON.parse(userStr);
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return user.role === 'student' ? <Navigate to="/student/dashboard" /> : <Navigate to="/" />;
+  try {
+    const user = JSON.parse(userStr);
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+      if (user.role === 'student') {
+        return <Navigate to="/student/dashboard" />;
+      } else if (user.role === 'coordinator') {
+        return <Navigate to="/" />;
+      } else {
+        // Safe fallback for corrupt localstorage role
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        return <Navigate to="/login" />;
+      }
+    }
+  } catch (e) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return <Navigate to="/login" />;
   }
   
   return children;
