@@ -125,6 +125,7 @@ exports.deleteStudent = async (req, res) => {
 exports.payFee = async (req, res) => {
   const student_id = req.user.id;
   const { transaction_id } = req.body;
+  console.log(`[payFee] student_id: ${student_id}, transaction_id: ${transaction_id}`);
 
   try {
     const result = await db.query(
@@ -134,8 +135,8 @@ exports.payFee = async (req, res) => {
     if(result.rows.length === 0) return res.status(404).json({ msg: 'Student not found' });
     res.json({ msg: 'Payment submission received. Pending verification.', student: result.rows[0] });
   } catch(err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('[payFee] Error:', err);
+    res.status(500).send(`Server Error: ${err.message}`);
   }
 };
 

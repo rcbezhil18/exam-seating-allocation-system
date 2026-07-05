@@ -55,9 +55,10 @@ const StudentDashboard = () => {
       localStorage.setItem('user', JSON.stringify(updatedUser));
       setUser(updatedUser);
       setShowQRModal(false);
+      alert("Payment details submitted successfully! The Exam Cell will verify your payment shortly.");
     } catch(err) {
       console.error(err);
-      alert('Failed to submit payment details.');
+      alert(err.response?.data?.msg || err.response?.data || 'Failed to submit payment details.');
     } finally {
       setProcessing(false);
     }
