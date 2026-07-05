@@ -22,7 +22,7 @@ const StudentDashboard = () => {
         const freshUser = userRes.data;
         setUser(freshUser);
         setFeeStatus(freshUser.payment_status || 'NOT_PAID');
-        localStorage.setItem('user', JSON.stringify(freshUser));
+        localStorage.setItem('user', JSON.stringify({ ...freshUser, role: 'student' }));
 
         // Fetch allocations
         const res = await api.get('/allocations/student/me');
@@ -51,7 +51,7 @@ const StudentDashboard = () => {
       const res = await api.post('/students/pay', { transaction_id: txId });
       
       setFeeStatus('PENDING');
-      const updatedUser = { ...user, payment_status: 'PENDING' };
+      const updatedUser = { ...user, payment_status: 'PENDING', role: 'student' };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       setUser(updatedUser);
       setShowQRModal(false);

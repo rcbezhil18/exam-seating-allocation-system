@@ -91,6 +91,7 @@ exports.getMe = async (req, res) => {
     const result = await db.query('SELECT * FROM Students WHERE id = $1', [req.user.id]);
     if (result.rows.length === 0) return res.status(404).json({ msg: 'Student not found' });
     let st = result.rows[0];
+    st.role = 'student';
     st.payment_status = st.payment_status === 'Unpaid' ? 'NOT_PAID' : st.payment_status === 'Paid' ? 'VERIFIED' : st.payment_status === 'Pending' ? 'PENDING' : st.payment_status;
     res.json(st);
   } catch (err) {
