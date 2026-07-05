@@ -56,15 +56,30 @@ exports.uploadExams = async (req, res) => {
     if (!req.file) return res.status(400).json({ msg: 'No file uploaded' });
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+    
+    if (!data || data.length === 0) {
+      return res.status(400).json({ msg: 'The uploaded file is empty' });
+    }
+
+    // Helper for robust case-insensitive column matching
+    const getRowVal = (row, possibleKeys) => {
+      const keys = Object.keys(row);
+      for (const pKey of possibleKeys) {
+        const match = keys.find(k => k.trim().toLowerCase() === pKey.trim().toLowerCase());
+        if (match !== undefined) return row[match];
+      }
+      return undefined;
+    };
+
     let count = 0;
     
     for (const row of data) {
-      const name = row['Exam name(IAT or Semester)'] || row['Exam Name'] || row['name'];
-      const subject_name = row['Subject Name'] || row['subject'];
-      const subject_code = row['Subject Code'] || row['code'];
-      const dateStr = row['Date'] || row['date'];
-      const session = row['Session (FN / AN)'] || row['Session'] || row['session'];
-      const time = row['Time'] || row['time'];
+      const name = getRowVal(row, ['Exam name(IAT or Semester)', 'Exam Name', 'name', 'exam_name']);
+      const subject_name = getRowVal(row, ['Subject Name', 'subject', 'subject_name', 'Subject']);
+      const subject_code = getRowVal(row, ['Subject Code', 'code', 'subject_code', 'SubjectCode']);
+      const dateStr = getRowVal(row, ['Date', 'date']);
+      const session = getRowVal(row, ['Session (FN / AN)', 'Session', 'session']);
+      const time = getRowVal(row, ['Time', 'time']);
       
       if (name && subject_name && dateStr) {
         let dateVal = dateStr;
@@ -79,6 +94,14 @@ exports.uploadExams = async (req, res) => {
         count++;
       }
     }
+
+    if (count === 0) {
+      const detectedColumns = Object.keys(data[0] || {}).join(', ');
+      return res.status(400).json({ 
+        msg: `No valid records matched. Detected columns: [${detectedColumns}]. Please ensure columns match: Exam Name, Subject Name, Subject Code, Date, Session, and Time.` 
+      });
+    }
+
     res.json({ msg: `Successfully imported ${count} timetable entries.` });
   } catch (err) {
     console.error(err);

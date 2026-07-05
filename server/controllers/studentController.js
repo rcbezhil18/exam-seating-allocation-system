@@ -17,15 +17,29 @@ exports.uploadStudents = async (req, res) => {
     const sheetName = workbook.SheetNames[0];
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
+    if (!data || data.length === 0) {
+      return res.status(400).json({ msg: 'The uploaded file is empty' });
+    }
+
+    // Helper for robust case-insensitive column matching
+    const getRowVal = (row, possibleKeys) => {
+      const keys = Object.keys(row);
+      for (const pKey of possibleKeys) {
+        const match = keys.find(k => k.trim().toLowerCase() === pKey.trim().toLowerCase());
+        if (match !== undefined) return row[match];
+      }
+      return undefined;
+    };
+
     let processedCount = 0;
     
     for (const row of data) {
-      const name = row['Name'] || row['name'] || row['Student Name'];
-      const roll_no = row['Register Number'] || row['Roll No'] || row['roll_no'] || row['Roll Number'];
-      const dob = row['Date of Birth (DD-MM-YYYY)'] || row['Date of Birth'] || row['dob'] || row['DOB'];
-      const fee_amount = parseFloat(row['Fee Amount'] || row['Fee'] || row['fee_amount']) || 0.00;
-      const branch = row['Branch'] || row['branch'] || row['Department'];
-      const semester = row['Semester'] || row['semester'] || row['Sem'];
+      const name = getRowVal(row, ['Name', 'Student Name', 'Full Name', 'student_name']);
+      const roll_no = getRowVal(row, ['Register Number', 'Roll No', 'roll_no', 'Roll Number', 'Reg No', 'Register No', 'reg_no']);
+      const dob = getRowVal(row, ['Date of Birth (DD-MM-YYYY)', 'Date of Birth', 'dob', 'DOB', 'Date Of Birth', 'd_o_b', 'D.O.B']);
+      const fee_amount = parseFloat(getRowVal(row, ['Fee Amount', 'Fee', 'fee_amount', 'fee'])) || 0.00;
+      const branch = getRowVal(row, ['Branch', 'branch', 'Department', 'dept', 'Dept', 'department']);
+      const semester = getRowVal(row, ['Semester', 'semester', 'Sem', 'sem']);
       
       if (name && roll_no && branch && semester && dob) {
         await db.query(
@@ -41,6 +55,13 @@ exports.uploadStudents = async (req, res) => {
         );
         processedCount++;
       }
+    }
+
+    if (processedCount === 0) {
+      const detectedColumns = Object.keys(data[0] || {}).join(', ');
+      return res.status(400).json({ 
+        msg: `No valid records matched. Detected columns: [${detectedColumns}]. Please ensure columns match: Name, Register Number, Date of Birth (DD-MM-YYYY), Fee Amount, Branch, and Semester.` 
+      });
     }
 
     res.json({ msg: `Successfully processed ${processedCount} records` });

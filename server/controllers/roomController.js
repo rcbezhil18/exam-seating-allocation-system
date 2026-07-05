@@ -56,16 +56,31 @@ exports.uploadRooms = async (req, res) => {
     if (!req.file) return res.status(400).json({ msg: 'No file uploaded' });
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+    
+    if (!data || data.length === 0) {
+      return res.status(400).json({ msg: 'The uploaded file is empty' });
+    }
+
+    // Helper for robust case-insensitive column matching
+    const getRowVal = (row, possibleKeys) => {
+      const keys = Object.keys(row);
+      for (const pKey of possibleKeys) {
+        const match = keys.find(k => k.trim().toLowerCase() === pKey.trim().toLowerCase());
+        if (match !== undefined) return row[match];
+      }
+      return undefined;
+    };
+
     let count = 0;
     
     for (const row of data) {
-      const room_no = row['Hall Number'] || row['Room No'] || row['room_no'];
-      const capacity = parseInt(row['Capacity'] || row['capacity']) || 0;
-      const building = row['Block / Location'] || row['Block'] || row['Location'] || row['building'];
+      const room_no = getRowVal(row, ['Hall Number', 'Room No', 'room_no', 'Hall No', 'Room Number', 'room_number']);
+      const capacity = parseInt(getRowVal(row, ['Capacity', 'capacity'])) || 0;
+      const building = getRowVal(row, ['Block / Location', 'Block', 'Location', 'building', 'block', 'location']);
       
-      // Attempt to extract rows and cols, or guess based on capacity (e.g. assume rows = capacity / 6 if unknown)
-      const parsedCols = parseInt(row['Columns'] || row['Cols'] || row['columns']);
-      const parsedRows = parseInt(row['Rows'] || row['rows']);
+      // Attempt to extract rows and cols, or guess based on capacity
+      const parsedCols = parseInt(getRowVal(row, ['Columns', 'Cols', 'columns', 'cols']));
+      const parsedRows = parseInt(getRowVal(row, ['Rows', 'rows']));
       
       const cols = parsedCols ? parsedCols : 6;
       const rows = parsedRows ? parsedRows : Math.ceil(capacity / cols);
@@ -79,6 +94,14 @@ exports.uploadRooms = async (req, res) => {
         count++;
       }
     }
+
+    if (count === 0) {
+      const detectedColumns = Object.keys(data[0] || {}).join(', ');
+      return res.status(400).json({ 
+        msg: `No valid records matched. Detected columns: [${detectedColumns}]. Please ensure columns match: Hall Number, Capacity, and Block / Location.` 
+      });
+    }
+
     res.json({ msg: `Successfully imported ${count} halls.` });
   } catch (err) {
     console.error(err);
